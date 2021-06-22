@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering.PostProcessing;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -13,6 +14,10 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float     airAcell    = 100.0f;
     [SerializeField] private float     jumpForce   = 100.0f;
     private Vector3 inputDirection = Vector3.zero;
+
+    [Header("DESACELLERATE")]
+    [SerializeField] private float normalDesacelerate   = 16.0f;
+    [SerializeField] private float afterAirDesacelerate = 32.0f;
 
     [Header("LIMITERS")]
     [SerializeField] private float groundMaxSpeed = 5.0f;
@@ -28,8 +33,16 @@ public class PlayerMovement : MonoBehaviour
     private float zMove = 0.0f;
     private bool  jump  = false;
 
+    [Header("EFFECTS")]
+    [SerializeField] private PostProcessVolume volume = null;
+    private LensDistortion lensDistortion = null;
+
     private void Awake() {
         rig = GetComponent<Rigidbody>();
+    }
+
+    private void Start() {
+        volume.profile.TryGetSettings(out lensDistortion);
     }
 
     private void Update() {
@@ -37,6 +50,9 @@ public class PlayerMovement : MonoBehaviour
         Move();
         Jump();
         SpeedLimiters();
+
+        print(new Vector3(rig.velocity.x, 0f, rig.velocity.z).magnitude);
+        lensDistortion.intensity.value = -new Vector3(rig.velocity.x, 0f, rig.velocity.z).magnitude * 2.5f;
 
         onGround = OnGround();
     }
@@ -65,7 +81,7 @@ public class PlayerMovement : MonoBehaviour
     private void SpeedLimiters() {
         if (onGround) {
             if (inputDirection.magnitude < 0.1f) {
-                rig.velocity = Vector3.MoveTowards(rig.velocity, new Vector3(0f, rig.velocity.y, 0f), 16f * Time.deltaTime);
+                rig.velocity = Vector3.MoveTowards(rig.velocity, new Vector3(0f, rig.velocity.y, 0f), normalDesacelerate * Time.deltaTime);
                 return;
             }
 
@@ -74,7 +90,7 @@ public class PlayerMovement : MonoBehaviour
             if (desacellerate) {
                 canMove = false;
 
-                rig.velocity = Vector3.MoveTowards(rig.velocity, new Vector3(vel.x, rig.velocity.y, vel.z), 32f * Time.deltaTime);
+                rig.velocity = Vector3.MoveTowards(rig.velocity, new Vector3(vel.x, rig.velocity.y, vel.z), afterAirDesacelerate * Time.deltaTime);
                 if (Vector3.Distance(rig.velocity, new Vector3(vel.x, rig.velocity.y, vel.z)) < 0.1f) {
                     desacellerate = false;
                     canMove       = true;
