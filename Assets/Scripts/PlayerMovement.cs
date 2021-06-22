@@ -34,7 +34,8 @@ public class PlayerMovement : MonoBehaviour
     private bool  jump  = false;
 
     [Header("EFFECTS")]
-    [SerializeField] private PostProcessVolume volume = null;
+    [SerializeField] private ParticleSystem    highSpeedParticles = null;
+    [SerializeField] private PostProcessVolume volume             = null;
     private LensDistortion lensDistortion = null;
 
     private void Awake() {
@@ -48,11 +49,9 @@ public class PlayerMovement : MonoBehaviour
     private void Update() {
         CaptureInput();
         Move();
+        MoveEffects();
         Jump();
-        SpeedLimiters();
-
-        print(new Vector3(rig.velocity.x, 0f, rig.velocity.z).magnitude);
-        lensDistortion.intensity.value = -new Vector3(rig.velocity.x, 0f, rig.velocity.z).magnitude * 2.5f;
+        SpeedLimiters();        
 
         onGround = OnGround();
     }
@@ -69,6 +68,19 @@ public class PlayerMovement : MonoBehaviour
         else { speed = airAcell; }
 
         rig.AddForce(moveDirection.normalized * speed * Time.fixedDeltaTime);
+    }
+
+    private void MoveEffects() {
+        lensDistortion.intensity.value = -new Vector3(rig.velocity.x, 0f, rig.velocity.z).magnitude * 2.5f;
+
+        if (rig.velocity.magnitude > 10.0f) {
+            var emission = highSpeedParticles.emission;
+            emission.rateOverTime = rig.velocity.magnitude * 2;
+            if (!highSpeedParticles.isPlaying) highSpeedParticles.Play();
+        }
+        else if(highSpeedParticles.isPlaying) {
+            highSpeedParticles.Stop();
+        }
     }
 
     private void Jump() {
